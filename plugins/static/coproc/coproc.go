@@ -17,13 +17,13 @@ func init() {
 
 func findPlugins() []string {
 	var plugins []string
-	found, err := ioutil.ReadDir("plugins/coproc")
+	found, err := ioutil.ReadDir("plugins/external")
 	if err != nil {
 		log.Println(err)
 		return []string{}
 	}
 	for _, file := range found {
-		filepath := "plugins/coproc/" + file.Name() + "/" + file.Name()
+		filepath := "plugins/external/" + file.Name() + "/" + file.Name()
 		if _, err := os.Stat(filepath); err == nil {
 			plugins = append(plugins, filepath)
 		}

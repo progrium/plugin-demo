@@ -2,6 +2,8 @@ package gateway
 
 import (
 	"log"
+	"net/http"
+	"net/url"
 
 	"github.com/progrium/duplex/poc2/duplex/rpc"
 	"github.com/progrium/plugin-demo/demo"
@@ -32,6 +34,8 @@ func (g *PluginGateway) Register(args *RegisterArgs, reply *bool) error {
 		switch iface {
 		case "ImageProvider":
 			demo.ImageProviders.Register(&remoteProxy{args.Name})
+		case "RequestHandler":
+			demo.RequestHandlers.Register(&remoteProxy{args.Name})
 		}
 	}
 	*reply = true
@@ -42,21 +46,43 @@ type remoteProxy struct {
 	peer string
 }
 
-func (p *remoteProxy) Error(err error) {
-	log.Println("plugin["+p.peer+"]:", err)
+func (p *remoteProxy) call(method string, input, output interface{}) error {
+	call, err := Peer.OpenCall(p.peer, method, input, output)
+	if err != nil {
+		log.Println("plugin["+p.peer+"]:", err)
+		return err
+	}
+	<-call.Done
+	return nil
 }
 
 /*func (p *remoteProxy) FilterRequest(req *http.Request) (bool, string, int) {
 
 }*/
 
+func (p *remoteProxy) MatchEndpoint() (method string, path string) {
+	var endpoint map[string]string
+	err := p.call("Plugin.MatchEndpoint", nil, &endpoint)
+	if err != nil {
+		return "", ""
+	}
+	return endpoint["method"], endpoint["path"]
+}
+
+func (p *remoteProxy) Handle(u *url.URL, h http.Header, input interface{}) (int, http.Header, interface{}, error) {
+	var obj map[string][]string
+	err := p.call("Plugin.Handle", nil, &obj)
+	if err != nil {
+		return http.StatusInternalServerError, nil, nil, nil
+	}
+	return http.StatusOK, nil, obj, nil
+}
+
 func (p *remoteProxy) Images() []demo.Image {
 	var images []demo.Image
-	call, err := Peer.OpenCall(p.peer, "Plugin.Images", nil, &images)
+	err := p.call("Plugin.Images", nil, &images)
 	if err != nil {
-		p.Error(err)
 		return []demo.Image{}
 	}
-	<-call.Done
 	return images
 }

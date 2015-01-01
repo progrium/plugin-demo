@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"path"
+	"runtime"
 
 	"github.com/progrium/go-scripting"
 	"github.com/progrium/go-scripting/ottojs"
@@ -11,13 +13,28 @@ import (
 )
 
 func init() {
+	_, file, _, ok := runtime.Caller(2)
+	if ok && path.Base(file) == "plugins.go" {
+		for name, ifaces := range LoadScripts("plugins/scripts") {
+			for _, iface := range ifaces {
+				switch iface {
+				case "ImageProvider":
+					demo.ImageProviders.Register(&scriptProxy{name})
+				case "RequestFilter":
+					demo.RequestFilters.Register(&scriptProxy{name})
+				}
+			}
+		}
+	}
+}
+
+func LoadScripts(path string) map[string][]string {
 	ottojs.Register()
 	scripting.UpdateGlobals(map[string]interface{}{
 		"println": log.Println,
 	})
-	// dirty hacks, load relative from various working dirs
-	scripting.LoadModulesFromPath("plugins/scripts")
-	scripting.LoadModulesFromPath("../scripts")
+	scripting.LoadModulesFromPath(path)
+	scripts := make(map[string][]string)
 	for name, _ := range scripting.Modules() {
 		ret, err := scripting.Call(name, "implements", nil)
 		if err != nil {
@@ -25,15 +42,12 @@ func init() {
 			continue
 		}
 		log.Println("Loading script", name, ret)
+		scripts[name] = make([]string, 0)
 		for _, iface := range ret.([]interface{}) {
-			switch iface {
-			case "ImageProvider":
-				demo.ImageProviders.Register(&scriptProxy{name})
-			case "RequestFilter":
-				demo.RequestFilters.Register(&scriptProxy{name})
-			}
+			scripts[name] = append(scripts[name], iface.(string))
 		}
 	}
+	return scripts
 }
 
 type scriptProxy struct {
@@ -80,18 +94,6 @@ func mapToStruct(m map[string]interface{}, val interface{}) error {
 		return err
 	}
 	err = json.Unmarshal(tmp, val)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func structToMap(s interface{}, m interface{}) error {
-	tmp, err := json.Marshal(s)
-	if err != nil {
-		return err
-	}
-	err = json.Unmarshal(tmp, m)
 	if err != nil {
 		return err
 	}

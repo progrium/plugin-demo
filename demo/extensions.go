@@ -1,49 +1,61 @@
 package demo
 
 import (
-	"log"
-	"path"
-	"runtime"
+	"github.com/progrium/plugin-demo/demo/extensions"
 )
 
 // RequestFilter
 
-var RequestFilters = new(requestFilterExt)
-
-type requestFilterExt struct {
-	filters []RequestFilter
+var RequestFilters = &requestFilters{
+	extensions.NewExtensionPoint(new(RequestFilter)),
 }
 
-func (ext *requestFilterExt) All() []RequestFilter {
-	return ext.filters
+type requestFilters struct {
+	*extensions.ExtensionPoint
 }
 
-func (ext *requestFilterExt) Register(filter RequestFilter) {
-	if ext.filters == nil {
-		ext.filters = make([]RequestFilter, 0)
+func (ep *requestFilters) All() []RequestFilter {
+	all := make([]RequestFilter, 0)
+	for _, v := range ep.ExtensionPoint.All() {
+		all = append(all, v.(RequestFilter))
 	}
-	_, file, _, _ := runtime.Caller(1)
-	log.Println("registering RequestFilter via", path.Base(file))
-	ext.filters = append(ext.filters, filter)
+	return all
+}
+
+// RequestHandler
+
+var RequestHandlers = &requestHandlers{
+	extensions.NewExtensionPoint(new(RequestHandler)),
+}
+
+type requestHandlers struct {
+	*extensions.ExtensionPoint
+}
+
+func (ep *requestHandlers) All() []RequestHandler {
+	all_untyped := ep.ExtensionPoint.All()
+	all_typed := make([]RequestHandler, len(all_untyped))
+	for i, v := range all_untyped {
+		all_typed[i] = v.(RequestHandler)
+	}
+	return all_typed
 }
 
 // ImageProvider
 
-var ImageProviders = new(imageProviderExt)
-
-type imageProviderExt struct {
-	providers []ImageProvider
+var ImageProviders = &imageProviders{
+	extensions.NewExtensionPoint(new(ImageProvider)),
 }
 
-func (ext *imageProviderExt) All() []ImageProvider {
-	return ext.providers
+type imageProviders struct {
+	*extensions.ExtensionPoint
 }
 
-func (ext *imageProviderExt) Register(provider ImageProvider) {
-	if ext.providers == nil {
-		ext.providers = make([]ImageProvider, 0)
+func (ep *imageProviders) All() []ImageProvider {
+	all_untyped := ep.ExtensionPoint.All()
+	all_typed := make([]ImageProvider, len(all_untyped))
+	for i, v := range all_untyped {
+		all_typed[i] = v.(ImageProvider)
 	}
-	_, file, _, _ := runtime.Caller(1)
-	log.Println("registering ImageProvider via", path.Base(file))
-	ext.providers = append(ext.providers, provider)
+	return all_typed
 }

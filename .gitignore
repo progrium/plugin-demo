@@ -1,1 +1,4 @@
 plugin-demo
+plugins/external/discovery/discovery
+plugins/external/extra-images/extra-images
+plugins/external/scripting/scripting
