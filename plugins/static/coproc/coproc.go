@@ -4,15 +4,35 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"os/signal"
+	"time"
 
+	"github.com/progrium/plugin-demo/demo/coproc"
 	"github.com/progrium/plugin-demo/demo/gateway"
-	"github.com/progrium/plugn/coproc"
 )
 
 func init() {
 	log.Println("starting plugins...")
+	log.Println(os.Getpid())
 	go gateway.Serve("unix:///tmp/demo-gateway.sock")
-	go coproc.StartCoprocs(findPlugins(), os.Stdout, "coproc")
+	host := coproc.StartHost(findPlugins())
+	go func() {
+		handler := make(chan os.Signal, 1)
+		signal.Notify(handler, os.Interrupt)
+		first := true
+		for sig := range handler {
+			switch sig {
+			case os.Interrupt:
+				log.Println("ctrl-c detected")
+				host.Shutdown(!first)
+				go func() {
+					host.Wait()
+					os.Exit(0)
+				}()
+				first = false
+			}
+		}
+	}()
 }
 
 func findPlugins() []string {

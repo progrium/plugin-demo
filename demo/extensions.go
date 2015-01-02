@@ -33,12 +33,11 @@ type requestHandlers struct {
 }
 
 func (ep *requestHandlers) All() []RequestHandler {
-	all_untyped := ep.ExtensionPoint.All()
-	all_typed := make([]RequestHandler, len(all_untyped))
-	for i, v := range all_untyped {
-		all_typed[i] = v.(RequestHandler)
+	all := make([]RequestHandler, 0)
+	for _, v := range ep.ExtensionPoint.All() {
+		all = append(all, v.(RequestHandler))
 	}
-	return all_typed
+	return all
 }
 
 // ImageProvider
@@ -52,10 +51,9 @@ type imageProviders struct {
 }
 
 func (ep *imageProviders) All() []ImageProvider {
-	all_untyped := ep.ExtensionPoint.All()
-	all_typed := make([]ImageProvider, len(all_untyped))
-	for i, v := range all_untyped {
-		all_typed[i] = v.(ImageProvider)
+	all := make([]ImageProvider, 0)
+	for _, v := range ep.ExtensionPoint.All() {
+		all = append(all, v.(ImageProvider))
 	}
-	return all_typed
+	return all
 }
