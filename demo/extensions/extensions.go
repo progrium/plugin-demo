@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"sync"
 
-	"code.google.com/p/go-uuid/uuid"
+	"github.com/pborman/uuid"
 )
 
 var ErrStrNotRegistered = "extensions: not registered: "
